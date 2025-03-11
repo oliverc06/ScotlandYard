@@ -7,11 +7,11 @@ import javax.annotation.Nonnull;
 import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
-//import java.util.*;
-//import javax.annotation.Nonnull;
-//import uk.ac.bris.cs.scotlandyard.model.Move.*;
-//import uk.ac.bris.cs.scotlandyard.model.Piece.*;
-//import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
+import java.util.*;
+import javax.annotation.Nonnull;
+import uk.ac.bris.cs.scotlandyard.model.Move.*;
+import uk.ac.bris.cs.scotlandyard.model.Piece.*;
+import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 import java.util.Optional;
 
 /**
@@ -20,21 +20,70 @@ import java.util.Optional;
  */
 public final class MyGameStateFactory implements Factory<GameState> {
 
+	//build() creates a new game state
 	@Nonnull @Override public GameState build(
 			GameSetup setup,
 			Player mrX,
 			ImmutableList<Player> detectives) {
-		return new MyGameState();
+		return new MyGameState(setup, ImmutableSet.of(MrX.MRX), ImmutableList.of(), mrX, detectives);
 	}
 		// TODO
 		private final class MyGameState implements GameState {
-			@Override public GameSetup getSetup() {  return null; }
-			@Override public ImmutableSet<Piece> getPlayers() { return null; }
-			@Override public GameState advance(Move move) {  return null;  }
-			@Override public Optional<Integer> getDetectiveLocation(Piece.Detective detective) { return Optional.empty(); }
+		// Variables to store the game state
+			private GameSetup setup;
+			private ImmutableSet<Piece> remaining;
+			private ImmutableList<LogEntry> log;
+			private Player mrX;
+			private ImmutableList<Player> detectives;
+			private ImmutableSet<Move> moves;
+			private ImmutableSet<Piece> winner;
+
+			//Constructor for MyGameState which build() calls
+			private MyGameState(
+					final GameSetup setup,
+					final ImmutableSet<Piece> remaining,
+					final ImmutableList<LogEntry> log,
+					final Player mrX,
+					final ImmutableList<Player> detectives) {
+				if(setup.moves.isEmpty()) throw new IllegalArgumentException("Moves is empty!");
+				if(detectives.isEmpty()) throw new IllegalArgumentException("Error, no detectives");
+//				if( throw new IllegalArgumentException("There shouldn't be a winner at initialisation");
+//				if(remaining.isEmpty()) throw new IllegalArgumentException("Graph is empty");
+				if(!(mrX.isMrX())) throw new IllegalArgumentException("No MrX");
+				this.setup = setup;
+				this.remaining = remaining;
+				this.log = log;
+				this.mrX = mrX;
+				this.detectives = detectives;
+			}
+
+			//Methods of GameState which
+			@Override public GameSetup getSetup() { return setup; }
+			@Override public ImmutableSet<Piece> getPlayers() { return remaining; }
+			@Override public GameState advance(Move move) { return null;
+//				return move.accept(new Move.Visitor<GameState>() {
+//
+//					@Override
+//					public GameState visit(Move.SingleMove move) {
+//						return null;
+//					}
+//
+//					@Override
+//					public GameState visit(Move.DoubleMove move) {
+//						return null;
+//						//travel log - update twice
+//					}
+//				}
+			}
+			@Override public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
+//				if(detective.isDetective()) {
+//					return Optional.of(getDetectiveLocation(detective));
+//				}
+				return Optional.empty();
+			}
 			@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) { return Optional.empty(); }
-			@Override public ImmutableList<LogEntry> getMrXTravelLog() { return null; }
-			@Override public ImmutableSet<Piece> getWinner() { return null; }
-			@Override public ImmutableSet<Move> getAvailableMoves() { return null; }
+			@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
+			@Override public ImmutableSet<Piece> getWinner() { return winner; }
+			@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
 		}
 	}
