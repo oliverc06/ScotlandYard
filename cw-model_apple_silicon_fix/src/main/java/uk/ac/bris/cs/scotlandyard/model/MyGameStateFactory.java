@@ -46,8 +46,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					final Player mrX,
 					final ImmutableList<Player> detectives) {
 				if(setup.moves.isEmpty()) throw new IllegalArgumentException("Moves is empty!");
-				if(detectives.isEmpty()) throw new IllegalArgumentException("Error, no detectives");
-//				if( throw new IllegalArgumentException("There shouldn't be a winner at initialisation");
+//				if(winner.isEmpty()) throw new IllegalArgumentException("There shouldn't be a winner at initialisation");
 //				if(remaining.isEmpty()) throw new IllegalArgumentException("Graph is empty");
 				if(!(mrX.isMrX())) throw new IllegalArgumentException("No MrX");
 				this.setup = setup;
@@ -55,6 +54,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				this.log = log;
 				this.mrX = mrX;
 				this.detectives = detectives;
+				this.winner = ImmutableSet.of();
+				detectiveChecks(detectives);
+//				if(detectives.has(Ticket.DOUBLE)) throw new IllegalArgumentException("Detective cannot have double ticket");
+
+			}
+
+			private void detectiveChecks(ImmutableList<Player> detectives) {
+				for (int i = 0; i < detectives.size(); i++) {
+					if (detectives.get(i).has(Ticket.DOUBLE)) {
+						throw new IllegalArgumentException("Detective cannot have double ticket");
+					}
+				}
+				if(detectives.isEmpty()) throw new IllegalArgumentException("Error, no detectives");
 			}
 
 			//Methods of GameState which
@@ -83,7 +95,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			}
 			@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) { return Optional.empty(); }
 			@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
-			@Override public ImmutableSet<Piece> getWinner() { return winner; }
+			@Override public ImmutableSet<Piece> getWinner() { return null; }
 			@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
 		}
 	}
