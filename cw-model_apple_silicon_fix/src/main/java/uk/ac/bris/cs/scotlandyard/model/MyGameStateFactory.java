@@ -8,8 +8,7 @@ import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 import java.util.*;
-import javax.annotation.Nonnull;
-import uk.ac.bris.cs.scotlandyard.model.Move.*;
+
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 import java.util.Optional;
@@ -34,9 +33,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			private ImmutableSet<Piece> remaining;
 			private ImmutableList<LogEntry> log;
 			private Player mrX;
-			private ImmutableList<Player> detectives;
+			private List<Player> detectives;
 			private ImmutableSet<Move> moves;
 			private ImmutableSet<Piece> winner;
+			private ImmutableList<Player> players;
 
 			//Constructor for MyGameState which build() calls
 			private MyGameState(
@@ -44,24 +44,30 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					final ImmutableSet<Piece> remaining,
 					final ImmutableList<LogEntry> log,
 					final Player mrX,
-					final ImmutableList<Player> detectives) {
+					final List<Player> detectives) {
 				if(setup.moves.isEmpty()) throw new IllegalArgumentException("Moves is empty!");
-//				if(remaining.isEmpty()) throw new IllegalArgumentException("Graph is empty");
+				if(setup.graph.nodes().isEmpty()) throw new IllegalArgumentException("Graph is empty!");
 				this.setup = setup;
 				this.remaining = remaining;
 				this.log = log;
 				this.mrX = mrX;
 				this.detectives = detectives;
 				this.winner = ImmutableSet.of();
+				this.players = playersList();
 				if(!(winner.isEmpty())) throw new IllegalArgumentException("There shouldn't be a winner at initialisation");
-
 				detectiveChecks(detectives);
 				mrXchecks(mrX);
-//				if(detectives.has(Ticket.DOUBLE)) throw new IllegalArgumentException("Detective cannot have double ticket");
-
 			}
 
-			private void detectiveChecks(ImmutableList<Player> detectives) {
+			private ImmutableList<Player> playersList() {
+				List<Player> detectivesList = new ArrayList<>();
+				detectivesList.add(mrX);
+				detectivesList.addAll(detectives);
+				return ImmutableList.copyOf(detectivesList);
+			}
+
+			private void detectiveChecks(List<Player> detectives) {
+				if(detectives.isEmpty()) throw new IllegalArgumentException("Error, no detectives");
 				for (int i = 0; i < detectives.size(); i++) {
 					Player detective = detectives.get(i);
 					if (detective.has(Ticket.DOUBLE)) {
@@ -70,38 +76,55 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if (detective.has(Ticket.SECRET)) {
 						throw new IllegalArgumentException("Detective cannot have secret ticket");
 					}
-					Map<Ticket, Integer> ticketMap = detective.tickets();
+//					Map<Ticket, Integer> ticketMap = detective.tickets();
 
-					for (Ticket ticket : Ticket.values()) {
-						int ticketCount = ticketMap.getOrDefault(ticket, 0);
-						int detectiveTicketCount = detective.tickets().getOrDefault(ticket, 0);
-
-//						System.out.println("Ticket: " + ticket + ", Expected: " + ticketCount + ", Actual: " + detectiveTicketCount);
-
-						if (ticketCount != detectiveTicketCount){
-							throw new IllegalArgumentException("Ticket count doesn't match");
-						}
-					}
 				}
-				if(detectives.isEmpty()) throw new IllegalArgumentException("Error, no detectives");
 			}
 
 			//I think this function works ok
 			private void mrXchecks(Player mrX) {
 				if (!(mrX.isMrX())) throw new IllegalArgumentException("No MrX");
-				Map<Ticket, Integer> ticketMap = mrX.tickets();
-				for (Ticket ticket : Ticket.values()) {
-					int ticketCount = ticketMap.getOrDefault(ticket, 0);
-					int mrxTicketCount = mrX.tickets().getOrDefault(ticket, 0);
-					if (mrxTicketCount != ticketCount) {
-						throw new IllegalArgumentException("Ticket count doesn't match");
-					}
-				}
 			}
+
+
+//			public Player playerFinder(Piece piece, List<Player> players) {
+//				for (Player p : players) {
+//					if (p.piece().equals(piece)) {
+//						return p;
+//					}
+//				}
+//				throw new IllegalArgumentException("Player not found for piece: " + piece);
+//			}
+
+//			public Optional<Map<Ticket, Integer>> getTicketsPlayers(Piece piece) {
+//				TicketBoard board = new TicketBoard() {
+//					@Override
+//					public int getCount(@Nonnull Ticket ticket) {
+//						if (piece.isMrX()) {
+//							return mrX.tickets().get(ticket);
+//						}
+//						if (piece.isDetective()) {
+//							for (int i = 0; i < detectives.size(); i++) {
+//								Player detective = detectives.get(i);
+//								if (detective.piece().equals(piece)) {
+//									return detective.tickets().get(ticket);
+//								}
+//							}
+//						}
+//						return 0;
+//					}
+//				};
+//                return Optional.empty();
+//            }
 
 			//Methods of GameState which
 			@Override public GameSetup getSetup() { return setup; }
-			@Override public ImmutableSet<Piece> getPlayers() { return remaining; }
+			@Override public ImmutableSet<Piece> getPlayers() {
+				return remaining; //This is wrong I've just put it so it compiles
+//				for (Player player : playersList()) {
+//					return ImmutableSet<Player> player;
+//				}
+			}
 			@Override public GameState advance(Move move) { return null;
 //				return move.accept(new Move.Visitor<GameState>() {
 //
@@ -117,13 +140,29 @@ public final class MyGameStateFactory implements Factory<GameState> {
 //					}
 //				}
 			}
-			@Override public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
-//				if(detective.isDetective()) {
-//					return Optional.of(getDetectiveLocation(detective));
-//				}
-				return Optional.empty();
-			}
-			@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) { return Optional.empty(); }
+			@Override public Optional<Integer> getDetectiveLocation(Detective detective) {
+					for (Player DETECTIVE : detectives) {
+						if (DETECTIVE.piece().equals(detective)) { //Checks if ACTUAL detective piece is equal to detective getting searched for
+							return Optional.of(DETECTIVE.location());
+						}
+					}
+                return Optional.empty();
+            }
+
+			@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+					for (Player player : playersList()) {
+						if (player.piece().equals(piece)) { //Checks if ACTUAL player piece is equal to the piece getting searched for
+							return Optional.of(new TicketBoard() {
+								@Override
+								public int getCount(Ticket ticket) {
+									return player.tickets().get(ticket);
+								}
+							});
+						}
+					}
+					return Optional.empty();
+				 }
+
 			@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 			@Override public ImmutableSet<Piece> getWinner() { return winner; }
 			@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
