@@ -45,8 +45,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					final ImmutableList<LogEntry> log,
 					final Player mrX,
 					final List<Player> detectives) {
-				if(setup.moves.isEmpty()) throw new IllegalArgumentException("Moves is empty!");
-				if(setup.graph.nodes().isEmpty()) throw new IllegalArgumentException("Graph is empty!");
 				this.setup = setup;
 				this.remaining = remaining;
 				this.log = log;
@@ -55,15 +53,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				this.winner = ImmutableSet.of();
 				this.players = playersList();
 				if(!(winner.isEmpty())) throw new IllegalArgumentException("There shouldn't be a winner at initialisation");
+				if(setup.moves.isEmpty()) throw new IllegalArgumentException("Moves is empty!");
+				if(setup.graph.nodes().isEmpty()) throw new IllegalArgumentException("Graph is empty!");
+				if (!(mrX.isMrX())) throw new IllegalArgumentException("No MrX");
 				detectiveChecks(detectives);
-				mrXchecks(mrX);
 			}
 
 			private ImmutableList<Player> playersList() {
-				List<Player> detectivesList = new ArrayList<>();
-				detectivesList.add(mrX);
-				detectivesList.addAll(detectives);
-				return ImmutableList.copyOf(detectivesList);
+				List<Player> playerList = new ArrayList<>();
+				playerList.add(mrX);
+				playerList.addAll(detectives);
+				return ImmutableList.copyOf(playerList);
 			}
 
 			private void detectiveChecks(List<Player> detectives) {
@@ -76,16 +76,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if (detective.has(Ticket.SECRET)) {
 						throw new IllegalArgumentException("Detective cannot have secret ticket");
 					}
-//					Map<Ticket, Integer> ticketMap = detective.tickets();
-
+				}
+				for (int i = 0; i < detectives.size() - 1; i++) {
+					if(detectives.get(i).location() == detectives.get(i + 1).location()) throw new IllegalArgumentException("Detectives location overlap!");
 				}
 			}
-
-			//I think this function works ok
-			private void mrXchecks(Player mrX) {
-				if (!(mrX.isMrX())) throw new IllegalArgumentException("No MrX");
-			}
-
 
 //			public Player playerFinder(Piece piece, List<Player> players) {
 //				for (Player p : players) {
@@ -120,11 +115,14 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			//Methods of GameState which
 			@Override public GameSetup getSetup() { return setup; }
 			@Override public ImmutableSet<Piece> getPlayers() {
-				return remaining; //This is wrong I've just put it so it compiles
-//				for (Player player : playersList()) {
-//					return ImmutableSet<Player> player;
-//				}
+				Set<Piece> playerSet = new HashSet<>();
+				playerSet.add(mrX.piece());
+				for(Player detective : detectives) {
+					playerSet.add(detective.piece());
+				}
+				return ImmutableSet.copyOf(playerSet);
 			}
+
 			@Override public GameState advance(Move move) { return null;
 //				return move.accept(new Move.Visitor<GameState>() {
 //
