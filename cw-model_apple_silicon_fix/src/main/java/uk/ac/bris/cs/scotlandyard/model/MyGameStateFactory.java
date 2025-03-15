@@ -76,9 +76,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if (detective.has(Ticket.SECRET)) {
 						throw new IllegalArgumentException("Detective cannot have secret ticket");
 					}
+					for (int j = 0; j < detectives.size() - 1; j++) {
+						if(detectives.get(i).location() == detectives.get(j).location() && (i != j)) throw new IllegalArgumentException("Detectives location overlap!");
 				}
-				for (int i = 0; i < detectives.size() - 1; i++) {
-					if(detectives.get(i).location() == detectives.get(i + 1).location()) throw new IllegalArgumentException("Detectives location overlap!");
+
 				}
 			}
 
