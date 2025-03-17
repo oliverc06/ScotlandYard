@@ -52,6 +52,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				this.detectives = detectives;
 				this.winner = ImmutableSet.of();
 				this.players = playersList();
+//				this.moves =
 				if(!(winner.isEmpty())) throw new IllegalArgumentException("There shouldn't be a winner at initialisation");
 				if(setup.moves.isEmpty()) throw new IllegalArgumentException("Moves is empty!");
 				if(setup.graph.nodes().isEmpty()) throw new IllegalArgumentException("Graph is empty!");
@@ -140,34 +141,34 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 					// TODO consider the rules of secret moves here
 					//  add moves to the destination via a secret ticket if there are any left with the player
-					if(player.has(Ticket.SECRET)) { //Secret means can move anywhere
-						singleMoveSet.add(new Move.SingleMove(player.piece(), source, Ticket.SECRET, destination));
+						if(player.has(Ticket.SECRET)) { //Secret means can move anywhere
+							singleMoveSet.add(new Move.SingleMove(player.piece(), source, Ticket.SECRET, destination));
 					}
 				}
 				// TODO return the collection of moves
 				return singleMoveSet;
 			}
-			//comment
 
 			private static Set<Move.DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
 				HashSet<Move.DoubleMove> doubleMoveSet = new HashSet<>(); //HashSet to store double moves
+				Set<Move.SingleMove> firstMoves = new HashSet<>(makeSingleMoves(setup, detectives, player, source));
+				for (Move.SingleMove firstMove : firstMoves) {
+					for (int destination : setup.graph.adjacentNodes(firstMove.destination)) {
+						boolean taken = false;
+						for (Player detective : detectives) {
+							if (detective.location() == destination) {
+								taken = true;
+								break; //Stops checking if at least 1 detective is in destination
+							}
+						}
 
-				for (int destination : setup.graph.adjacentNodes(source)) {
-					// TODO find out if destination is occupied by a detective
-					//  if the location is occupied, don't add to the collection of moves to return
-					boolean taken = false;
-					for (Player detective : detectives) {
-						if (detective.location() == destination) {
-							taken = true;
-							break; //Stops checking if at least 1 detective is in destination
-						}
-					}
-					for (Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
-						if (player.has(t.requiredTicket())) {
-							doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, t.requiredTicket(), destination, t.requiredTicket(), destination));
-						}
-						if (player.has(Ticket.SECRET)) { //Secret means can move anywhere
-							doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, Ticket.SECRET, destination, Ticket.SECRET, destination)); //I think this is wrong
+						for (Transport t : setup.graph.edgeValueOrDefault(firstMove.destination, destination, ImmutableSet.of())) {
+							if (player.has(t.requiredTicket())) {
+								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, t.requiredTicket(), firstMove.destination, t.requiredTicket(), destination));
+							}
+							if (player.has(Ticket.SECRET)) { //Secret means can move anywhere
+								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, Ticket.SECRET, firstMove.destination, Ticket.SECRET, destination)); //I think this is wrong
+							}
 						}
 					}
 				}
@@ -226,6 +227,24 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 			@Override public ImmutableSet<Piece> getWinner() { return winner; }
-			@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
+			@Override public ImmutableSet<Move> getAvailableMoves() {
+				Set<Move> moves = new HashSet<>();
+
+				// Get moves for Mr. X
+
+				if (mrX.has(Ticket.DOUBLE) && (setup.moves.size() - log.size() >= 2) && (mrX.isMrX())){ // conditionals: checks if enough rounds available for double move
+					moves.addAll(makeDoubleMoves(setup, detectives, mrX, mrX.location()));
+				}
+				else{
+					moves.addAll(makeSingleMoves(setup, detectives, mrX, mrX.location()));
+				}
+
+				// Get moves for each detective
+				for (Player detective : detectives) {
+					moves.addAll(makeSingleMoves(setup, detectives, detective, detective.location()));
+				}
+
+				return ImmutableSet.copyOf(moves);
+			}
 		}
 	}
