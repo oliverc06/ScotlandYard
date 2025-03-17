@@ -147,6 +147,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				// TODO return the collection of moves
 				return singleMoveSet;
 			}
+			//comment
 
 			private static Set<Move.DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
 				HashSet<Move.DoubleMove> doubleMoveSet = new HashSet<>(); //HashSet to store double moves
