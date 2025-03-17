@@ -113,7 +113,68 @@ public final class MyGameStateFactory implements Factory<GameState> {
 //                return Optional.empty();
 //            }
 
-			//Methods of GameState which
+			private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+
+				// TODO create an empty collection of some sort, say, HashSet, to store all the SingleMove we generate
+				HashSet<Move.SingleMove>  singleMoveSet = new HashSet<>();
+
+
+				for(int destination : setup.graph.adjacentNodes(source)) {
+					// TODO find out if destination is occupied by a detective
+					//  if the location is occupied, don't add to the collection of moves to return
+					boolean taken = false;
+					for(Player detective : detectives) {
+						if (detective.location() == destination) {
+							taken = true;
+							break; //Stops checking if at least 1 detective is in destination
+						}
+					}
+
+					for(Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()) ) {
+						// TODO find out if the player has the required tickets
+						//  if it does, construct a SingleMove and add it the collection of moves to return
+						if(player.has(t.requiredTicket())) {
+							singleMoveSet.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
+						}
+					}
+
+					// TODO consider the rules of secret moves here
+					//  add moves to the destination via a secret ticket if there are any left with the player
+					if(player.has(Ticket.SECRET)) { //Secret means can move anywhere
+						singleMoveSet.add(new Move.SingleMove(player.piece(), source, Ticket.SECRET, destination));
+					}
+				}
+				// TODO return the collection of moves
+				return singleMoveSet;
+			}
+
+			private static Set<Move.DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
+				HashSet<Move.DoubleMove> doubleMoveSet = new HashSet<>(); //HashSet to store double moves
+
+				for (int destination : setup.graph.adjacentNodes(source)) {
+					// TODO find out if destination is occupied by a detective
+					//  if the location is occupied, don't add to the collection of moves to return
+					boolean taken = false;
+					for (Player detective : detectives) {
+						if (detective.location() == destination) {
+							taken = true;
+							break; //Stops checking if at least 1 detective is in destination
+						}
+					}
+					for (Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
+						if (player.has(t.requiredTicket())) {
+							doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, t.requiredTicket(), destination, t.requiredTicket(), destination));
+						}
+						if (player.has(Ticket.SECRET)) { //Secret means can move anywhere
+							doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, Ticket.SECRET, destination, Ticket.SECRET, destination)); //I think this is wrong
+						}
+					}
+				}
+				return doubleMoveSet;
+			}
+
+
+				//Methods of GameState which
 			@Override public GameSetup getSetup() { return setup; }
 			@Override public ImmutableSet<Piece> getPlayers() {
 				Set<Piece> playerSet = new HashSet<>();
