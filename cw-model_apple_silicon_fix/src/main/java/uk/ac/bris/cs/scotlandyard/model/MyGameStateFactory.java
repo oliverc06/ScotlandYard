@@ -187,21 +187,57 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return ImmutableSet.copyOf(playerSet);
 			}
 
-			@Override public GameState advance(Move move) { return null;
-//				return move.accept(new Move.Visitor<GameState>() {
-//
-//					@Override
-//					public GameState visit(Move.SingleMove move) {
-//						return null;
-//					}
-//
-//					@Override
-//					public GameState visit(Move.DoubleMove move) {
-//						return null;
-//						//travel log - update twice
-//					}
-//				}
+			@Override public GameState advance(Move move) {
+				moves = getAvailableMoves();
+				if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+				return move.accept(new Move.Visitor<GameState>() {
+
+					@Override
+					public GameState visit(Move.SingleMove move) {
+						List<LogEntry> newLog = new ArrayList<>(log);
+						List<Player> newDetectives = new ArrayList<>(detectives);
+						List<Piece> newRemaining = new ArrayList<>(remaining);
+						if (move.commencedBy().isMrX()) {
+							if (setup.moves.get(log.size())) //Gets TRUE or FALSE indicating reveal or hidden round
+							{
+								newLog.add(LogEntry.reveal(move.ticket, move.destination)); //Update the log
+								mrX = mrX.use(move.tickets()); //Use up ticket
+								mrX = mrX.at(move.destination); //Update MrX's location
+								for (Player detective : detectives) {
+									if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
+										newRemaining.add(detective.piece());
+									}
+								}
+								//travel log - update once
+								// use one ticket up
+								// return game state
+							}
+						}
+						if (move.commencedBy().isDetective()) {
+							for(Player detective : detectives) {
+								if(detective.piece().equals(move.commencedBy())) {
+									newDetectives.remove(detective);
+									detective = detective.at(move.destination);
+									detective = detective.use(move.tickets());
+									newDetectives.add(detective);
+								}
+
+							}
+						}
+						return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), mrX, newDetectives);
+					}
+
+					@Override
+					public GameState visit(Move.DoubleMove move) {
+						return null;
+						//travel log - update twice
+						// Use double move ticket and use up the two individual tickets used in the double move
+						//return game state
+//						return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), mrX, newDetectives);
+					}
+				});
 			}
+
 			@Override public Optional<Integer> getDetectiveLocation(Detective detective) {
 					for (Player DETECTIVE : detectives) {
 						if (DETECTIVE.piece().equals(detective)) { //Checks if ACTUAL detective piece is equal to detective getting searched for
