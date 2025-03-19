@@ -123,25 +123,30 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				for(int destination : setup.graph.adjacentNodes(source)) {
 					// TODO find out if destination is occupied by a detective
 					//  if the location is occupied, don't add to the collection of moves to return
+					boolean taken = false;
+
 					for(Player detective : detectives) {
 						if (detective.location() == destination) {
+							taken = true;
 							break; //Stops checking if at least 1 detective is in destination
+
 						}
 					}
 
 					for(Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()) ) {
 						// TODO find out if the player has the required tickets
 						//  if it does, construct a SingleMove and add it the collection of moves to return
-						if(player.has(t.requiredTicket())) {
+						if(player.has(t.requiredTicket()) && (!(taken))) {
 							singleMoveSet.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
+						}
+						if(player.has(Ticket.SECRET)&& (!(taken))) { //Secret means can move anywhere
+							singleMoveSet.add(new Move.SingleMove(player.piece(), source, Ticket.SECRET, destination));
 						}
 					}
 
 					// TODO consider the rules of secret moves here
 					//  add moves to the destination via a secret ticket if there are any left with the player
-						if(player.has(Ticket.SECRET)) { //Secret means can move anywhere
-							singleMoveSet.add(new Move.SingleMove(player.piece(), source, Ticket.SECRET, destination));
-					}
+
 				}
 				// TODO return the collection of moves
 				return singleMoveSet;
@@ -149,30 +154,73 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			private static Set<Move.DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
 				HashSet<Move.DoubleMove> doubleMoveSet = new HashSet<>(); //HashSet to store double moves
-				Set<Move.SingleMove> firstMoves = new HashSet<>(makeSingleMoves(setup, detectives, player, source));
-				for (Move.SingleMove firstMove : firstMoves) {
-					for (int destination : setup.graph.adjacentNodes(firstMove.destination)) {
-						for (Player detective : detectives) {
-							if (detective.location() == destination) {
-								break; //Stops checking if at least 1 detective is in destination
-							}
-						}
+				boolean taken1 = false;
+				boolean taken2 = false;
 
-						for (Transport t : setup.graph.edgeValueOrDefault(firstMove.destination, destination, ImmutableSet.of())) {
-							player = player.use(firstMove.ticket);
-							if (player.hasAtLeast(t.requiredTicket(), 1)) {
-								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, firstMove.ticket, firstMove.destination, t.requiredTicket(), destination));
-							}
-							player = player.give(firstMove.ticket);
-							player = player.use(Ticket.SECRET);
-							if (player.hasAtLeast(Ticket.SECRET, 1)) { //Secret means can move anywhere
-								doubleMoveSet.add(new Move.DoubleMove(player.piece(), firstMove.source(), Ticket.SECRET, firstMove.destination, Ticket.SECRET, destination)); //I think this is wrong
-							}
-							player = player.give(Ticket.SECRET);
-
+				for (int destination1 : setup.graph.adjacentNodes(source)) {
+					for (Player detective : detectives) {
+						if (detective.location() == destination1) {
+							taken1 = true;
+							break; //Stops checking if at least 1 detective is in destination
 						}
 					}
+					for(Transport t1 : setup.graph.edgeValueOrDefault(source, destination1, ImmutableSet.of()) ) {
+						if(player.has(t1.requiredTicket()) && player.has(Ticket.DOUBLE) && (!(taken1))) {
+							for (int destination2 : setup.graph.adjacentNodes(destination1)) {
+								for (Player detective : detectives) {
+									if (detective.location() == destination1) {
+										taken2 = true;
+										break; //Stops checking if at least 1 detective is in destination
+									}
+								}
+								for(Transport t2 : setup.graph.edgeValueOrDefault(destination1, destination2, ImmutableSet.of()) ) {
+									if (t1.requiredTicket() == t2.requiredTicket()) {
+										if (player.hasAtLeast(t2.requiredTicket(), 2) && (!(taken2)) && (!(taken1))) {
+											doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, t1.requiredTicket(), destination1, t2.requiredTicket(), destination2));
+										}
+									}
+									if (t1.requiredTicket() == Ticket.SECRET) {
+										if (player.has(t2.requiredTicket()) && (!(taken1)) && (!(taken2)) && (player.has(Ticket.SECRET))) {
+											doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, Ticket.SECRET, destination1, t2.requiredTicket(), destination2));
+										}
+									}
+									if (t2.requiredTicket() == Ticket.SECRET) {
+										if (player.has(t1.requiredTicket()) && (!(taken1)) && (!(taken2)) && (player.has(Ticket.SECRET))) {
+											doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, t1.requiredTicket(), destination1, Ticket.SECRET, destination2));
+
+										}
+									}
+								}
+							}
+						}
+					}
+
 				}
+
+//				Set<Move.SingleMove> firstMoves = new HashSet<>(makeSingleMoves(setup, detectives, player, source));
+//				for (Move.SingleMove firstMove : firstMoves) {
+//					for (int destination : setup.graph.adjacentNodes(firstMove.destination)) {
+//						for (Player detective : detectives) {
+//							if (detective.location() == destination) {
+//								break; //Stops checking if at least 1 detective is in destination
+//							}
+//						}
+//
+//						for (Transport t : setup.graph.edgeValueOrDefault(firstMove.destination, destination, ImmutableSet.of())) {
+//							player = player.use(firstMove.ticket);
+//							if (player.hasAtLeast(t.requiredTicket(), 1)) {
+//								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, firstMove.ticket, firstMove.destination, t.requiredTicket(), destination));
+//							}
+//							player = player.give(firstMove.ticket);
+//							player = player.use(Ticket.SECRET);
+//							if (player.hasAtLeast(Ticket.SECRET, 1)) { //Secret means can move anywhere
+//								doubleMoveSet.add(new Move.DoubleMove(player.piece(), firstMove.source(), Ticket.SECRET, firstMove.destination, Ticket.SECRET, destination)); //I think this is wrong
+//							}
+//							player = player.give(Ticket.SECRET);
+//
+//						}
+//					}
+//				}
 				return doubleMoveSet;
 			}
 
@@ -225,7 +273,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 								detective = detective.at(move.destination);
 								detective = detective.use(move.ticket);
 								mrX = mrX.give(move.ticket);
-
 							}
 							if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
 								newRemaining.add(detective.piece());
