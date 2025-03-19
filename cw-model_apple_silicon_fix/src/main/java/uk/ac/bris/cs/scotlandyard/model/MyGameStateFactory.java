@@ -159,12 +159,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						}
 
 						for (Transport t : setup.graph.edgeValueOrDefault(firstMove.destination, destination, ImmutableSet.of())) {
-							if (player.hasAtLeast(t.requiredTicket(), 2)) {
-								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, t.requiredTicket(), firstMove.destination, t.requiredTicket(), destination));
+							player = player.use(firstMove.ticket);
+							if (player.hasAtLeast(t.requiredTicket(), 1)) {
+								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, firstMove.ticket, firstMove.destination, t.requiredTicket(), destination));
 							}
-							if (player.hasAtLeast(Ticket.SECRET, 2)) { //Secret means can move anywhere
-								doubleMoveSet.add(new Move.DoubleMove(player.piece(), source, Ticket.SECRET, firstMove.destination, Ticket.SECRET, destination)); //I think this is wrong
+							player = player.give(firstMove.ticket);
+							player = player.use(Ticket.SECRET);
+							if (player.hasAtLeast(Ticket.SECRET, 1)) { //Secret means can move anywhere
+								doubleMoveSet.add(new Move.DoubleMove(player.piece(), firstMove.source(), Ticket.SECRET, firstMove.destination, Ticket.SECRET, destination)); //I think this is wrong
 							}
+							player = player.give(Ticket.SECRET);
+
 						}
 					}
 				}
@@ -204,7 +209,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							else {
 								newLog.add(LogEntry.hidden(move.ticket));
 							}
-							mrX = mrX.use(move.tickets()); //Use up ticket
+							mrX = mrX.use(move.ticket); //Use up ticket
 							mrX = mrX.at(move.destination); //Update MrX's location
 							for (Player detective : detectives) {
 								if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
@@ -212,18 +217,20 @@ public final class MyGameStateFactory implements Factory<GameState> {
 								}
 							}
 						}
+
 						newRemaining.clear();
 
 						for (Player detective : detectives) {
 							if (detective.piece().equals(move.commencedBy())) {
 								detective = detective.at(move.destination);
-								detective = detective.use(move.tickets());
+								detective = detective.use(move.ticket);
+								mrX = mrX.give(move.ticket);
+
 							}
 							if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
 								newRemaining.add(detective.piece());
 							}
 						}
-
 						return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), mrX, newDetectives);
 					}
 
@@ -236,14 +243,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						if (setup.moves.get(log.size())) //Gets TRUE or FALSE indicating reveal or hidden round
 						{
 							newLog.add(LogEntry.reveal(move.ticket1, move.destination1)); //Update the log
-
 						}
 						else {
 							newLog.add(LogEntry.hidden(move.ticket1)); //If not a reveal round don't add destination to log
-
 						}
-						mrX = mrX.use(move.tickets()); //Use up ticket
+						mrX = mrX.use(move.ticket1); //Use up ticket
 						mrX = mrX.at(move.destination1); //Update MrX's location
+
 					//Second Move
 						if (setup.moves.get(log.size())) {
 							newLog.add(LogEntry.reveal(move.ticket2, move.destination2)); //Update the log
@@ -251,7 +257,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						else {
 							newLog.add(LogEntry.hidden(move.ticket2));
 						}
-						mrX = mrX.use(move.tickets()); //Use up ticket
+						mrX = mrX.use(move.ticket2); //Use up ticket
 						mrX = mrX.at(move.destination2); //Update MrX's location
 						for (Player detective : detectives) {
 							if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) { //Gives remaining detectives for next round
@@ -261,6 +267,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						//travel log - update twice
 						// Use double move ticket and use up the two individual tickets used in the double move
 						//return game state
+
 						return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), mrX, newDetectives);
 					}
 				});
