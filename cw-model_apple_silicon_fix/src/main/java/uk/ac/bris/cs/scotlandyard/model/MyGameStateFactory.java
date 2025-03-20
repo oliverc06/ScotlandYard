@@ -367,7 +367,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						break;
 					}
 				}
-
 				if (!(allDetectivesStuck)) {
 					return ImmutableSet.of(mrX.piece());
 			 	}
