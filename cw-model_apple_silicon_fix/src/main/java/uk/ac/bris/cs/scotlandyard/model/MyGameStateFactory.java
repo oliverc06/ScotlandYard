@@ -227,143 +227,96 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				}
 				return ImmutableSet.copyOf(playerSet);
 			}
+			public List<Player> getNextDetectives(Move move) {
+
+				List<Player> nextDetectives = new ArrayList<>(detectives);
+
+				return move.accept(new Move.Visitor<List<Player>>() {
+					@Override
+					public List<Player> visit(Move.SingleMove move) {
+						if (move.commencedBy().isDetective()) {
+							for (Player detective : detectives) {
+								if (move.commencedBy().equals(detective.piece())) {
+									nextDetectives.remove(detective);
+									detective = detective.use(move.tickets());
+									detective = detective.at(move.destination);
+									nextDetectives.add(detective);
+									mrX = mrX.give(move.tickets());
+								}
+							}
+						}
+						return nextDetectives;
+					}
+
+					@Override
+					public List<Player> visit(Move.DoubleMove move) {
+						return nextDetectives;
+					}
+				});
+			}
+
+			private ImmutableSet<Piece> getNextRemaining(Move move) {
+				Set<Piece> pieces = new HashSet<>(remaining);
+				pieces.remove(move.commencedBy());
+				if (move.commencedBy() == mrX.piece()) {
+					for (Player player : detectives) {
+						Set<Move.SingleMove> playerMoves = makeSingleMoves(setup, detectives, player, player.location());
+						if (!playerMoves.isEmpty()) pieces.add(player.piece());
+					}
+
+				} else if (pieces.isEmpty()) {
+					pieces.add(mrX.piece());
+				}
+				return ImmutableSet.copyOf(pieces);
+			}
 
 			@Override public GameState advance(Move move) {
 				moves = getAvailableMoves();
 				if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+
 				List<LogEntry> newLog = new ArrayList<>(log);
-				List<Player> newDetectives = new ArrayList<>(detectives);
-				List<Piece> newRemaining = new ArrayList<>(remaining);
-//				Player newMrX;
+
+
 				return move.accept(new Move.Visitor<GameState>() {
-					Player newMrX;
 					@Override
 					public GameState visit(Move.SingleMove move) {
 						if (move.commencedBy().isMrX()) {
-							if (setup.moves.get(log.size())) //Gets TRUE or FALSE indicating reveal or hidden round
-							{
-								newLog.add(LogEntry.reveal(move.ticket, move.destination)); //Update the log
-								//travel log - update once
-								// use one ticket up
-								// return game state
+							if (setup.moves.get(log.size())) {
+								newLog.add(LogEntry.reveal(move.ticket, move.destination));
 							}
 							else {
 								newLog.add(LogEntry.hidden(move.ticket));
 							}
-							mrX = mrX.use(move.ticket); //Use up ticket
-							mrX = mrX.at(move.destination); //Update MrX's location
-							for (Player detective : detectives) {
-								if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
-									newRemaining.add(detective.piece());
-								}
-							}
+							mrX = mrX.use(move.tickets());
+							mrX = mrX.at(move.destination);
 						}
-
-						newRemaining.clear();
-
-						for (Player detective : detectives) {
-							if (detective.piece().equals(move.commencedBy())) {
-								detective = detective.at(move.destination);
-								detective = detective.use(move.ticket);
-								mrX = mrX.give(move.ticket); //give ticket to mrX once detective has used it
-							}
-							if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
-								newRemaining.add(detective.piece());
-							}
-						}
-						return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), mrX, newDetectives);
+						List<Player> nextDetectives = getNextDetectives(move);
+						ImmutableSet<Piece> nextRemaining = getNextRemaining(move);
+						return new MyGameState(setup, nextRemaining, ImmutableList.copyOf(newLog), mrX, nextDetectives);
 					}
 
 					@Override
 					public GameState visit(Move.DoubleMove move) {
-						Player currentPlayer = getPlayerByPiece(move.commencedBy());
-						Player newPlayer = currentPlayer.use(move.tickets()); //Uses up tickets
-						newPlayer = newPlayer.at(move.destination2); //Move mrx to new location
-						//First Move
-						if (setup.moves.get(log.size())) //Gets TRUE or FALSE indicating reveal or hidden round
-						{
-							newLog.add(LogEntry.reveal(move.ticket1, move.destination1)); //Update the log
+						if (setup.moves.get(log.size())) {
+							newLog.add(LogEntry.reveal(move.ticket1, move.destination1));
 						}
 						else {
-							newLog.add(LogEntry.hidden(move.ticket1)); //If not a reveal round don't add destination to log
+							newLog.add(LogEntry.hidden(move.ticket1));
 						}
-						//for some reason the mrX lines below not needed
-						mrX = mrX.use(move.ticket1); //Use up ticket
-						mrX = mrX.at(move.destination1); //Update MrX's location
 
-					//Second Move
 						if (setup.moves.get(log.size())) {
-							newLog.add(LogEntry.reveal(move.ticket2, move.destination2)); //Update the log
+							newLog.add(LogEntry.reveal(move.ticket2, move.destination2));
 						}
 						else {
 							newLog.add(LogEntry.hidden(move.ticket2));
 						}
-						mrX = mrX.use(move.ticket2); //Use up ticket
-						mrX = mrX.at(move.destination2); //Update MrX's location
-						for (Player detective : detectives) {
-							if(!makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) { //Gives remaining detectives for next round
-								newRemaining.add(detective.piece());
-							}
-						}
-						//travel log - update twice
-						// Use double move ticket and use up the two individual tickets used in the double move
-						//return game state
 
-//						for (Player player : detectives) {
-//							if (player.piece() == newPlayer.piece()) {
-//								newDetectives.add(newPlayer);
-//							}
-//							else {
-//								newDetectives.add(player);
-//							}
-//						}
-//
-//						for (Piece piece : remaining) {
-//							if(piece != newPlayer.piece()) {
-//								newRemaining.add(piece);
-//							}
-//						}
-//
-//						if (newPlayer.isMrX()) {
-//							newMrX = newPlayer;
-//						}
-//						else {
-//							newMrX = mrX;
-//						}
-//
-//						if (move.commencedBy().isMrX()) {
-//							for (Player player : detectives) {
-//								newRemaining.add(player.piece());
-//							}
-//						}
-//						else {
-//							for (Piece piece : remaining) {
-//								if (piece != move.commencedBy()) {
-//									newRemaining.add(piece);
-//								}
-//							}
-//						}
-//
-//						for (Piece p : remaining) {
-//							Player player = getPlayerByPiece(p);
-//							if(p.isMrX()) {
-//                    /* The game is not over if MrX is cornered, but he can still escape
-//                       can scape using a double move, or secret */
-//								if(makeSingleMoves(setup, newDetectives, player, player.location()).isEmpty()
-//										&& !makeDoubleMoves(setup, newDetectives, newMrX, newMrX.location(), ImmutableList.copyOf(newLog)).isEmpty() ) {
-//									newRemaining.add(newMrX.piece());
-//								}
-//							} else {
-//								// check if a detective still has moves
-//								if(makeSingleMoves(setup, newDetectives, player, player.location()).isEmpty()) {
-//									newRemaining.add(newMrX.piece());
-//								}
-//							}
-//						}
-//
-//						if (newRemaining.isEmpty()) newRemaining.add(newMrX.piece());
-//
-						return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), newPlayer, newDetectives);
+						mrX = mrX.use(move.tickets());
+						mrX = mrX.at(move.destination2);
+
+						List<Player> nextDetectives = getNextDetectives(move);
+						ImmutableSet<Piece> nextRemaining = getNextRemaining(move);
+						return new MyGameState(setup, nextRemaining, ImmutableList.copyOf(newLog), mrX, nextDetectives);
 					}
 				});
 			}
