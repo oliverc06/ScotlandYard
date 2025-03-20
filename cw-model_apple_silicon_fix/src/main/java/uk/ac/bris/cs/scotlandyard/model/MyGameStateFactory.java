@@ -304,7 +304,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 							newLog.add(LogEntry.hidden(move.ticket1));
 						}
 
-						if (setup.moves.get(log.size())) {
+						if (setup.moves.get(log.size() + 1)) {
 							newLog.add(LogEntry.reveal(move.ticket2, move.destination2));
 						}
 						else {
@@ -346,41 +346,47 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 			@Override public ImmutableSet<Piece> getWinner() {
-//				Set<Piece> detectivePieceSet = new HashSet<>();
-//				List<Integer> detectiveLocationList = new ArrayList<>();
-//				for (Player detective : detectives) {
-//					detectivePieceSet.add(detective.piece()); //Populate list of detective pieces
-//					detectiveLocationList.add(detective.location()); //Populate list of detective locations
-//				}
-//				//If detective at same location as mrX, detectives win
-//				for (Player detective : detectives) {
-//					if (detective.location() == this.mrX.location()) {
-//						return ImmutableSet.copyOf(detectivePieceSet);
-//					}
-//				}
-//				//If none of the detectives can move then mrX wins
-//				for (Player detective : detectives) {
-//					if (makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty()) {
-//						return ImmutableSet.of(mrX.piece());
-//					}
-//				}
-//				//If no moves available when mrX turn, detectives win
-//				if (makeSingleMoves(setup, detectives, mrX, mrX.location()).isEmpty() && makeDoubleMoves(setup, detectives, mrX, mrX.location(), log).isEmpty() && remaining.contains(mrX.piece())) {
-//					return ImmutableSet.copyOf(detectivePieceSet);
-//				}
-//				//If mrX completes the log, mrX wins
-//				if (setup.moves.size() == getMrXTravelLog().size() && remaining.contains(mrX.piece())) {
-//					return ImmutableSet.of(mrX.piece());
-//				}
-//				return ImmutableSet.of();
-				return winner;
+
+				Set<Piece> detectivePieceSet = new HashSet<>();
+
+				for (Player detective : detectives) {
+					detectivePieceSet.add(detective.piece()); //Populate list of detective pieces
+				}
+
+				//If detective at same location as mrX, detectives win
+				for (Player detective : detectives) {
+					if (detective.location() == mrX.location()) {
+						return ImmutableSet.copyOf(detectivePieceSet);
+					}
+				}
+				//If none of the detectives can move then mrX wins
+				boolean allDetectivesStuck = false;
+				for (Player detective : detectives) {
+					if (!(makeSingleMoves(setup, detectives, detective, detective.location()).isEmpty())) {
+						allDetectivesStuck = true;
+						break;
+					}
+				}
+
+				if (!(allDetectivesStuck)) {
+					return ImmutableSet.of(mrX.piece());
+			 	}
+
+				//If no moves available when mrX turn, detectives win
+				if ((makeSingleMoves(setup, detectives, mrX, mrX.location()).isEmpty()) && (makeDoubleMoves(setup, detectives, mrX, mrX.location(), log).isEmpty()) && (remaining.contains(mrX.piece()))) {
+					return ImmutableSet.copyOf(detectivePieceSet);
+				}
+				//If mrX completes the log, mrX wins
+				if (setup.moves.size() == log.size() && remaining.contains(mrX.piece())) {
+					return ImmutableSet.of(mrX.piece());
+				}
+				return ImmutableSet.of();
 			}
 
 			@Override public ImmutableSet<Move> getAvailableMoves() {
 				List<Move> moves = new ArrayList<>();
 				winner = getWinner();
 				if (!winner.isEmpty()) return ImmutableSet.of(); //If game has a winner, no moves should be available
-				System.out.println("Remaining before move: " + remaining);
 				if (remaining.contains(mrX.piece())) {
 					moves.addAll(makeSingleMoves(setup, detectives, mrX, mrX.location()));
 					if (mrX.has(Ticket.DOUBLE) && (setup.moves.size() - log.size() >= 2)) {
@@ -397,7 +403,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						}
 					}
 				}
-				System.out.println("Remaining after move: " + remaining);
 				return ImmutableSet.copyOf(moves);
 			}
 		}
