@@ -213,7 +213,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						if (!playerMoves.isEmpty()) pieces.add(player.piece());
 					}
 
-				} else if (pieces.isEmpty()) {
+				}
+				else if (pieces.isEmpty()) {
 					pieces.add(mrX.piece());
 				}
 				return ImmutableSet.copyOf(pieces);
@@ -271,7 +272,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			@Override public Optional<Integer> getDetectiveLocation(Detective detective) {
 					for (Player DETECTIVE : detectives) {
-						if (DETECTIVE.piece().equals(detective)) { //Checks if ACTUAL detective piece is equal to detective getting searched for
+						if (DETECTIVE.piece().equals(detective)) {
 							return Optional.of(DETECTIVE.location());
 						}
 					}
