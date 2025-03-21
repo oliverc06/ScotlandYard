@@ -18,7 +18,6 @@ public final class MyModelFactory implements Factory<Model> {
 	@Nonnull @Override public Model build(GameSetup setup,
 	                                      Player mrX,
 	                                      ImmutableList<Player> detectives) {
-		// TODO
 		//Observer pattern requires way of subscribing, unsubscribing, and notifying subscribers of changes
 		return new Model() {
 			private final Set<Observer> observerSet = new HashSet<>();
@@ -53,19 +52,24 @@ public final class MyModelFactory implements Factory<Model> {
 			@Override
 			public void chooseMove(@Nonnull Move move) {
 				state = state.advance(move);
-				for (Observer observer : observerSet) {
-					ImmutableSet<Piece> winner = state.getWinner();
-					if (!(winner.isEmpty())) {
+				ImmutableSet<Piece> winner = state.getWinner();
+
+				System.out.println("Choosing move: " + move);
+				System.out.println("Winner: " + (winner.isEmpty() ? "No winner yet" : winner));
+
+				if (!winner.isEmpty()) {
+					System.out.println("Notifying GAME_OVER");
+					for (Observer observer : observerSet) {
 						observer.onModelChanged(state, Observer.Event.GAME_OVER);
-						return;
 					}
-					else {
-						observer.onModelChanged(state, Observer.Event.MOVE_MADE);
-					}
+					return;
+				}
+
+				System.out.println("Notifying MOVE_MADE");
+				for (Observer observer : observerSet) {
+					observer.onModelChanged(state, Observer.Event.MOVE_MADE);
 				}
 			}
-			// TODO Advance the model with move, then notify all observers of what what just happened.
-			//  you may want to use getWinner() to determine whether to send out Event.MOVE_MADE or Event.GAME_OVER
 		};
 	}
 }

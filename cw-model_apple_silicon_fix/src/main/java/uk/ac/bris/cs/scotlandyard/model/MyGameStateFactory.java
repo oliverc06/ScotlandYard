@@ -58,6 +58,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				detectiveChecks(detectives);
 			}
 
+			//Function returning list containing all players (detectives and mrX)
 			private ImmutableList<Player> playersList() {
 				List<Player> playerList = new ArrayList<>();
 				playerList.add(mrX);
@@ -65,6 +66,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return ImmutableList.copyOf(playerList);
 			}
 
+			//Function to perform checks and declutter the constructor
 			private void detectiveChecks(List<Player> detectives) {
 				if(detectives.isEmpty()) throw new IllegalArgumentException("Error, no detectives");
 				for (Player detective : detectives) {
@@ -81,6 +83,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				}
 			}
 
+			//Helper function to get all available single moves
 			private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
 
 				HashSet<Move.SingleMove>  singleMoveSet = new HashSet<>();
@@ -109,6 +112,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return singleMoveSet;
 			}
 
+			//Helper function to get all available double moves
 			private static Set<Move.DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, int source, ImmutableList<LogEntry> log) {
 
 				HashSet<Move.DoubleMove> doubleMoveSet = new HashSet<>();
